@@ -1,0 +1,32 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Fiber network scheme</title>
+  <desc id="desc">Illustration of core and city optical links</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#041726"/>
+      <stop offset="100%" stop-color="#0b0f1a"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <g fill="none" stroke="url(#line)" stroke-width="6" stroke-linecap="round" opacity="0.9">
+    <path d="M90 585 C 230 470, 350 500, 490 385 S 770 255, 1090 120"/>
+    <path d="M150 210 C 310 240, 430 250, 560 315 S 790 435, 1040 525"/>
+    <path d="M170 430 C 320 370, 460 365, 650 425 S 920 535, 1120 610"/>
+  </g>
+  <g fill="#7dd3fc">
+    <circle cx="90" cy="585" r="11"/>
+    <circle cx="490" cy="385" r="12"/>
+    <circle cx="770" cy="255" r="11"/>
+    <circle cx="1090" cy="120" r="14"/>
+    <circle cx="150" cy="210" r="10"/>
+    <circle cx="560" cy="315" r="12"/>
+    <circle cx="1040" cy="525" r="14"/>
+    <circle cx="170" cy="430" r="10"/>
+    <circle cx="650" cy="425" r="12"/>
+    <circle cx="1120" cy="610" r="14"/>
+  </g>
+</svg>

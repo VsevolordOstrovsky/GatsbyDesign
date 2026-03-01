@@ -1,0 +1,27 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Fiber build and maintenance</title>
+  <desc id="desc">Construction and maintenance illustration for telecom fiber routes</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0e2538"/>
+      <stop offset="100%" stop-color="#10141e"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1f2937"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#sky)"/>
+  <rect y="500" width="1200" height="220" fill="url(#road)"/>
+  <g stroke="#60a5fa" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.9">
+    <path d="M110 560 C 330 468, 560 468, 760 530 S 980 620, 1100 640"/>
+    <path d="M120 600 C 320 520, 560 520, 760 570 S 980 650, 1080 680"/>
+  </g>
+  <g fill="#93c5fd">
+    <rect x="160" y="338" width="110" height="162" rx="8"/>
+    <rect x="320" y="295" width="132" height="205" rx="8"/>
+    <rect x="500" y="252" width="145" height="248" rx="8"/>
+    <rect x="700" y="315" width="175" height="185" rx="8"/>
+    <rect x="930" y="275" width="120" height="225" rx="8"/>
+  </g>
+</svg>
