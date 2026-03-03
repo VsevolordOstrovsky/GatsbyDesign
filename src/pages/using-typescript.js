@@ -13,7 +13,7 @@ import DelovoeUchastieImage from "../images/delovoeuchastie.jpg"
 import FiberSchemeImage from "../images/fiber-scheme.svg"
 import RouteBuildImage from "../images/route-build.svg"
 import UlComLogo from "../images/ul-com-logo.jpg"
-import WorldMapTexture from "../images/vecteezy_world-map-background-grey-color-with-national-borders_10158602.jpg"
+import WorldMapTexture from "../images/vecteezy_world-map-background-grey-color-with-national-borders_10158602.png"
 
 const serviceCards = [
   {
@@ -55,6 +55,8 @@ const networkDirections = [
 const UsingTypescriptPage = () => {
   const servicesRef = React.useRef(null)
   const globeRef = React.useRef(null)
+  const globeSectionRef = React.useRef(null)
+  const globeCanvasRef = React.useRef(null)
 
   const scrollServices = direction => {
     if (!servicesRef.current) return
@@ -98,40 +100,20 @@ const UsingTypescriptPage = () => {
     earthTexture.wrapT = THREE.ClampToEdgeWrapping
 
     const globeGeometry = new THREE.SphereGeometry(1, 96, 96)
-    const hologramMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        map: { value: earthTexture },
-      },
+    const glowMaterial = new THREE.ShaderMaterial({
       vertexShader: `
         varying vec3 vNormal;
-        varying vec3 vWorldPosition;
-        varying vec2 vUv;
         void main() {
           vNormal = normalize(normalMatrix * normal);
-          vec4 worldPos = modelMatrix * vec4(position, 1.0);
-          vWorldPosition = worldPos.xyz;
-          vUv = uv;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
       fragmentShader: `
         varying vec3 vNormal;
-        varying vec3 vWorldPosition;
-        varying vec2 vUv;
-        uniform sampler2D map;
         void main() {
-          float fresnel = pow(1.0 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.4);
-          float bands = sin((vWorldPosition.y + 1.0) * 40.0) * 0.04;
-          float glow = clamp(fresnel + bands, 0.0, 1.0);
-          vec3 mapColor = texture2D(map, vUv).rgb;
-          float mapValue = dot(mapColor, vec3(0.299, 0.587, 0.114));
-          float landMask = smoothstep(0.3, 0.55, 1.0 - mapValue);
-          float edge = smoothstep(0.45, 0.6, 1.0 - mapValue) - smoothstep(0.6, 0.72, 1.0 - mapValue);
-          vec3 baseColor = mix(vec3(0.02, 0.08, 0.22), vec3(0.12, 0.38, 0.62), glow * 0.6);
-          vec3 landColor = mix(baseColor, vec3(0.4, 0.8, 1.0), landMask);
-          landColor += edge * vec3(0.2, 0.45, 0.8);
-          float alpha = 0.22 + glow * 0.25 + landMask * 0.4;
-          gl_FragColor = vec4(landColor, alpha);
+          float fresnel = pow(1.0 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+          vec3 glowColor = vec3(0.1, 0.75, 1.0);
+          gl_FragColor = vec4(glowColor, fresnel * 0.85);
         }
       `,
       transparent: true,
@@ -139,7 +121,19 @@ const UsingTypescriptPage = () => {
       depthWrite: false,
     })
 
-    const globe = new THREE.Mesh(globeGeometry, hologramMaterial)
+    const glowSphere = new THREE.Mesh(globeGeometry, glowMaterial)
+
+    const landMaterial = new THREE.MeshBasicMaterial({
+      map: earthTexture,
+      color: new THREE.Color(0x0b1d4a),
+      transparent: true,
+      opacity: 0.9,
+      alphaTest: 0.04,
+    })
+    const landSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(1.002, 96, 96),
+      landMaterial
+    )
 
 
     const atmosphereMaterial = new THREE.ShaderMaterial({
@@ -153,8 +147,8 @@ const UsingTypescriptPage = () => {
       fragmentShader: `
         varying vec3 vNormal;
         void main() {
-          float intensity = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
-          gl_FragColor = vec4(0.35, 0.7, 1.0, 1.0) * intensity;
+          float intensity = pow(0.72 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.35);
+          gl_FragColor = vec4(0.4, 0.85, 1.0, 1.0) * intensity * 1.25;
         }
       `,
       blending: THREE.AdditiveBlending,
@@ -189,7 +183,10 @@ const UsingTypescriptPage = () => {
     scene.add(stars)
 
     const globeGroup = new THREE.Group()
-    globeGroup.add(globe, atmosphere)
+    globeGroup.add(glowSphere, landSphere, atmosphere)
+    globeGroup.rotation.y = -2.0
+    globeGroup.rotation.x = 0.08
+    globeGroup.rotation.z = 0.1
     scene.add(globeGroup)
 
     const resize = () => {
@@ -202,30 +199,83 @@ const UsingTypescriptPage = () => {
     resize()
     window.addEventListener("resize", resize)
 
-    let targetRotationX = 0
-    let targetRotationY = 0
+    const section = globeSectionRef.current
+    const canvasWrap = globeCanvasRef.current
+    let scrollProgress = 0
+    let manualProgress = 0
+    let scrollLocked = false
+    let lockedScrollY = 0
+    const startCamera = new THREE.Vector3(0, 0, 4.0)
+    const endCamera = new THREE.Vector3(0.22, 0.16, 2.4)
+    const targetCamera = new THREE.Vector3()
 
-    const handleMove = event => {
-      const rect = container.getBoundingClientRect()
-      const x = (event.clientX - rect.left) / rect.width - 0.5
-      const y = (event.clientY - rect.top) / rect.height - 0.5
-      targetRotationY = x * 0.35
-      targetRotationX = y * 0.2
+    const updateScroll = () => {
+      if (!section) return
+      const rect = section.getBoundingClientRect()
+      const viewport = window.innerHeight || 1
+      const total = rect.height + viewport
+      const progress = (viewport - rect.top) / total
+      if (!scrollLocked) {
+        scrollProgress = THREE.MathUtils.clamp(progress, 0, 1)
+      }
+      const canvasRect = canvasWrap ? canvasWrap.getBoundingClientRect() : rect
+      const centerDelta =
+        Math.abs(canvasRect.top + canvasRect.height / 2 - viewport / 2)
+      const centerAligned = centerDelta <= 2
+      if (centerAligned && !scrollLocked) {
+        scrollLocked = true
+        lockedScrollY = window.scrollY
+        manualProgress = scrollProgress
+        section.classList.add(styles.globeSectionLocked)
+        document.body.style.position = "fixed"
+        document.body.style.top = `-${lockedScrollY}px`
+        document.body.style.left = "0"
+        document.body.style.right = "0"
+        document.body.style.width = "100%"
+        document.body.style.overflow = "hidden"
+      }
     }
 
-    const resetTilt = () => {
-      targetRotationX = 0
-      targetRotationY = 0
+    updateScroll()
+    window.addEventListener("scroll", updateScroll, { passive: true })
+
+    const unlockScroll = deltaY => {
+      if (!scrollLocked) return
+      scrollLocked = false
+      section.classList.remove(styles.globeSectionLocked)
+      document.body.style.position = ""
+      document.body.style.top = ""
+      document.body.style.left = ""
+      document.body.style.right = ""
+      document.body.style.width = ""
+      document.body.style.overflow = ""
+      window.scrollTo(0, lockedScrollY)
+      if (deltaY) {
+        window.scrollBy(0, deltaY)
+      }
     }
 
-    container.addEventListener("mousemove", handleMove)
-    container.addEventListener("mouseleave", resetTilt)
+    const handleWheel = event => {
+      if (!scrollLocked) return
+      event.preventDefault()
+      const delta = event.deltaY / 1700
+      manualProgress = THREE.MathUtils.clamp(manualProgress + delta, 0, 1)
+      scrollProgress = manualProgress
+      if (manualProgress <= 0 && event.deltaY < 0) {
+        unlockScroll(event.deltaY)
+      }
+      if (manualProgress >= 1 && event.deltaY > 0) {
+        unlockScroll(event.deltaY)
+      }
+    }
+
+    window.addEventListener("wheel", handleWheel, { passive: false })
 
     let frameId = 0
     const animate = () => {
-      globe.rotation.y += 0.0025
-      globeGroup.rotation.y += (targetRotationY - globeGroup.rotation.y) * 0.06
-      globeGroup.rotation.x += (targetRotationX - globeGroup.rotation.x) * 0.06
+      targetCamera.lerpVectors(startCamera, endCamera, scrollProgress)
+      camera.position.lerp(targetCamera, 0.08)
+      camera.lookAt(0, 0, 0)
       renderer.render(scene, camera)
       frameId = window.requestAnimationFrame(animate)
     }
@@ -234,10 +284,15 @@ const UsingTypescriptPage = () => {
     return () => {
       window.cancelAnimationFrame(frameId)
       window.removeEventListener("resize", resize)
-      container.removeEventListener("mousemove", handleMove)
-      container.removeEventListener("mouseleave", resetTilt)
+      window.removeEventListener("scroll", updateScroll)
+      window.removeEventListener("wheel", handleWheel)
+      if (scrollLocked) {
+        unlockScroll(0)
+      }
       globeGeometry.dispose()
-      hologramMaterial.dispose()
+      glowMaterial.dispose()
+      landSphere.geometry.dispose()
+      landMaterial.dispose()
       atmosphere.geometry.dispose()
       atmosphereMaterial.dispose()
       starsGeometry.dispose()
@@ -356,6 +411,20 @@ const UsingTypescriptPage = () => {
         </div>
       </section>
 
+      <section className={styles.globeSection} id="coverage" ref={globeSectionRef}>
+        <div className={styles.globeInner}>
+          <h2 className={styles.globeTitle} data-globe-text>
+            Глобус сети
+          </h2>
+          <p className={styles.globeSubtitle} data-globe-text>
+            Визуализация волоконно-оптической инфраструктуры в 3D.
+          </p>
+          <div className={styles.globeCanvas} ref={globeCanvasRef}>
+            <div className={styles.globeStage} ref={globeRef} />
+          </div>
+        </div>
+      </section>
+
       <section className={styles.ctaSection} id="contacts">
         <h2>Контакты</h2>
         <p>
@@ -372,16 +441,6 @@ const UsingTypescriptPage = () => {
           </Link>
         </div>
       </section>
-
-      <section className={styles.globeSection} id="coverage">
-        <div className={styles.globeInner}>
-          <h2 className={styles.globeTitle}>Глобус сети</h2>
-          <p className={styles.globeSubtitle}>
-            Визуализация волоконно-оптической инфраструктуры в 3D.
-          </p>
-          <div className={styles.globeCanvas} ref={globeRef} />
-        </div>
-      </section>
     </div>
   )
 }
@@ -389,6 +448,3 @@ const UsingTypescriptPage = () => {
 export const Head = () => <Seo title="ЮЛ-ком | ВОЛС" />
 
 export default UsingTypescriptPage
-
-
-
