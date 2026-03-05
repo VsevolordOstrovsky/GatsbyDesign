@@ -57,6 +57,8 @@ const UsingTypescriptPage = () => {
   const globeRef = React.useRef(null)
   const globeSectionRef = React.useRef(null)
   const globeCanvasRef = React.useRef(null)
+  const globeCopyStartRef = React.useRef(null)
+  const globeCopyMiddleRef = React.useRef(null)
 
   const scrollServices = direction => {
     if (!servicesRef.current) return
@@ -125,7 +127,7 @@ const UsingTypescriptPage = () => {
 
     const landMaterial = new THREE.MeshBasicMaterial({
       map: earthTexture,
-      color: new THREE.Color(0x0b1d4a),
+      color: new THREE.Color(0x4169e1),
       transparent: true,
       opacity: 0.9,
       alphaTest: 0.04,
@@ -184,10 +186,108 @@ const UsingTypescriptPage = () => {
 
     const globeGroup = new THREE.Group()
     globeGroup.add(glowSphere, landSphere, atmosphere)
-    globeGroup.rotation.y = -2.0
-    globeGroup.rotation.x = 0.08
+    globeGroup.rotation.y = -1.9
+    globeGroup.rotation.x = 0.42
     globeGroup.rotation.z = 0.1
+    globeGroup.position.y = 0.18
     scene.add(globeGroup)
+
+    const latLonToVector3 = (lat, lon, radius = 1.026) => {
+      const phi = THREE.MathUtils.degToRad(90 - lat)
+      const theta = THREE.MathUtils.degToRad(lon + 180)
+      return new THREE.Vector3(
+        -(radius * Math.sin(phi) * Math.cos(theta)),
+        radius * Math.cos(phi),
+        radius * Math.sin(phi) * Math.sin(theta)
+      )
+    }
+
+    const routesGroup = new THREE.Group()
+    globeGroup.add(routesGroup)
+    const textureWidthPx = 1920
+    const textureHeightPx = 1152
+    const pixelToVector3 = (x, y, radius = 1.03) => {
+      const lon = (x / textureWidthPx) * 360 - 180
+      const lat = 90 - (y / textureHeightPx) * 180
+      return latLonToVector3(lat, lon, radius)
+    }
+    const moscowPoint = pixelToVector3(1074, 425, 1.03)
+    const routePixels = [
+      { x: 1017, y: 400 },
+      { x: 1054, y: 409 },
+      { x: 1081, y: 395 },
+      { x: 1120, y: 396 },
+      { x: 1163, y: 418 },
+      { x: 1124, y: 445 },
+      { x: 1096, y: 476 },
+    ]
+    const moscowMarkerGeometry = new THREE.SphereGeometry(0.012, 16, 16)
+    const moscowMarkerMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff5866,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+    const moscowMarker = new THREE.Mesh(moscowMarkerGeometry, moscowMarkerMaterial)
+    moscowMarker.position.copy(moscowPoint)
+    routesGroup.add(moscowMarker)
+
+    const routeEntries = routePixels.map((point, index) => {
+      const endPoint = pixelToVector3(point.x, point.y, 1.03)
+      const midpoint = moscowPoint
+        .clone()
+        .add(endPoint)
+        .multiplyScalar(0.5)
+        .normalize()
+        .multiplyScalar(1.07 + moscowPoint.angleTo(endPoint) * 0.035)
+
+      const curve = new THREE.CatmullRomCurve3([moscowPoint, midpoint, endPoint])
+      const points = curve.getPoints(96)
+      const glowGeometry = new THREE.BufferGeometry().setFromPoints(points)
+      glowGeometry.setDrawRange(0, 2)
+      const coreGeometry = new THREE.BufferGeometry().setFromPoints(points)
+      coreGeometry.setDrawRange(0, 2)
+
+      const glowMaterial = new THREE.LineBasicMaterial({
+        color: 0xff5f6f,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+      const coreMaterial = new THREE.LineBasicMaterial({
+        color: 0xff2032,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+      const glowLine = new THREE.Line(glowGeometry, glowMaterial)
+      const coreLine = new THREE.Line(coreGeometry, coreMaterial)
+      routesGroup.add(glowLine, coreLine)
+
+      const cityMarkerMaterial = new THREE.MeshBasicMaterial({
+        color: 0xff8b95,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      })
+      const cityMarker = new THREE.Mesh(moscowMarkerGeometry, cityMarkerMaterial)
+      cityMarker.position.copy(endPoint)
+      routesGroup.add(cityMarker)
+
+      return {
+        index,
+        pointCount: points.length,
+        glowGeometry,
+        coreGeometry,
+        glowMaterial,
+        coreMaterial,
+        cityMarkerMaterial,
+      }
+    })
 
     const resize = () => {
       const { width, height } = container.getBoundingClientRect()
@@ -205,27 +305,51 @@ const UsingTypescriptPage = () => {
     let manualProgress = 0
     let scrollLocked = false
     let lockedScrollY = 0
+    let lastScrollY = window.scrollY
+    const lockTolerancePx = 6
+    const outsideStateHysteresisPx = 56
+    const unlockNudgePx = 10
+    const maxLockedProgress = 2.8
+    let lockCooldownUntil = 0
+    let outsideScrollState = 0
     const startCamera = new THREE.Vector3(0, 0, 4.0)
-    const endCamera = new THREE.Vector3(0.22, 0.16, 2.4)
+    const endCamera = new THREE.Vector3(1.02, 0.24, 2.08)
+    const startLookAt = new THREE.Vector3(0, 0, 0)
+    const endLookAt = new THREE.Vector3(0.34, 1.05, 0.43)
     const targetCamera = new THREE.Vector3()
+    const lookAtTarget = new THREE.Vector3()
+    const smoothPulse = (value, inStart, inEnd, outStart, outEnd) => {
+      const fadeIn = THREE.MathUtils.smoothstep(value, inStart, inEnd)
+      const fadeOut = 1 - THREE.MathUtils.smoothstep(value, outStart, outEnd)
+      return THREE.MathUtils.clamp(fadeIn * fadeOut, 0, 1)
+    }
 
     const updateScroll = () => {
       if (!section) return
-      const rect = section.getBoundingClientRect()
       const viewport = window.innerHeight || 1
-      const total = rect.height + viewport
-      const progress = (viewport - rect.top) / total
-      if (!scrollLocked) {
-        scrollProgress = THREE.MathUtils.clamp(progress, 0, 1)
-      }
+      const currentScrollY = window.scrollY
+      const scrollingDown = currentScrollY >= lastScrollY
+      lastScrollY = currentScrollY
+      const rect = section.getBoundingClientRect()
       const canvasRect = canvasWrap ? canvasWrap.getBoundingClientRect() : rect
-      const centerDelta =
-        Math.abs(canvasRect.top + canvasRect.height / 2 - viewport / 2)
-      const centerAligned = centerDelta <= 2
-      if (centerAligned && !scrollLocked) {
+      const canvasCenter = canvasRect.top + canvasRect.height / 2
+      const centerDelta = canvasCenter - viewport / 2
+      const centerAligned = Math.abs(centerDelta) <= lockTolerancePx
+
+      if (!scrollLocked) {
+        if (centerDelta < -outsideStateHysteresisPx) {
+          outsideScrollState = maxLockedProgress
+        } else if (centerDelta > outsideStateHysteresisPx) {
+          outsideScrollState = 0
+        }
+        scrollProgress = outsideScrollState
+      }
+
+      if (centerAligned && !scrollLocked && Date.now() >= lockCooldownUntil) {
         scrollLocked = true
         lockedScrollY = window.scrollY
-        manualProgress = scrollProgress
+        manualProgress = scrollingDown ? 0 : maxLockedProgress
+        scrollProgress = manualProgress
         section.classList.add(styles.globeSectionLocked)
         document.body.style.position = "fixed"
         document.body.style.top = `-${lockedScrollY}px`
@@ -249,22 +373,33 @@ const UsingTypescriptPage = () => {
       document.body.style.right = ""
       document.body.style.width = ""
       document.body.style.overflow = ""
-      window.scrollTo(0, lockedScrollY)
-      if (deltaY) {
-        window.scrollBy(0, deltaY)
-      }
+      const direction = deltaY === 0 ? 0 : deltaY > 0 ? 1 : -1
+      const unlockNudge = direction * unlockNudgePx
+      window.scrollTo(0, lockedScrollY + unlockNudge)
+      lastScrollY = window.scrollY
+      outsideScrollState =
+        direction > 0
+          ? maxLockedProgress
+          : direction < 0
+            ? 0
+            : outsideScrollState
+      lockCooldownUntil = Date.now() + 220
     }
 
     const handleWheel = event => {
       if (!scrollLocked) return
       event.preventDefault()
       const delta = event.deltaY / 1700
-      manualProgress = THREE.MathUtils.clamp(manualProgress + delta, 0, 1)
+      manualProgress = THREE.MathUtils.clamp(
+        manualProgress + delta,
+        0,
+        maxLockedProgress
+      )
       scrollProgress = manualProgress
       if (manualProgress <= 0 && event.deltaY < 0) {
         unlockScroll(event.deltaY)
       }
-      if (manualProgress >= 1 && event.deltaY > 0) {
+      if (manualProgress >= maxLockedProgress && event.deltaY > 0) {
         unlockScroll(event.deltaY)
       }
     }
@@ -273,9 +408,48 @@ const UsingTypescriptPage = () => {
 
     let frameId = 0
     const animate = () => {
-      targetCamera.lerpVectors(startCamera, endCamera, scrollProgress)
+      const cameraProgress = THREE.MathUtils.clamp(scrollProgress, 0, 1)
+      const routesProgress = THREE.MathUtils.clamp(
+        (scrollProgress - 1) / (maxLockedProgress - 1),
+        0,
+        1
+      )
+      targetCamera.lerpVectors(startCamera, endCamera, cameraProgress)
+      lookAtTarget.lerpVectors(startLookAt, endLookAt, cameraProgress)
       camera.position.lerp(targetCamera, 0.08)
-      camera.lookAt(0, 0, 0)
+      camera.lookAt(lookAtTarget)
+      globeGroup.rotation.x = THREE.MathUtils.lerp(0.42, 0.02, cameraProgress)
+      globeGroup.rotation.y = THREE.MathUtils.lerp(-1.9, -1.56, cameraProgress)
+
+      moscowMarkerMaterial.opacity = routesProgress
+      routeEntries.forEach(route => {
+        const startAt = route.index * 0.1
+        const localProgress = THREE.MathUtils.clamp(
+          (routesProgress - startAt) / (1 - startAt),
+          0,
+          1
+        )
+        const drawCount = Math.max(2, Math.floor(route.pointCount * localProgress))
+        route.glowGeometry.setDrawRange(0, drawCount)
+        route.coreGeometry.setDrawRange(0, drawCount)
+        route.glowMaterial.opacity = localProgress * 0.92
+        route.coreMaterial.opacity = localProgress
+        route.cityMarkerMaterial.opacity = localProgress
+      })
+
+      const startCopyOpacity = smoothPulse(scrollProgress, 0.03, 0.25, 0.82, 1.02)
+      const middleCopyOpacity = smoothPulse(scrollProgress, 0.95, 1.15, 1.62, 1.9)
+      const endCopyOpacity = THREE.MathUtils.smoothstep(scrollProgress, 1.0, 1.24)
+      if (globeCopyStartRef.current) {
+        globeCopyStartRef.current.style.opacity = `${startCopyOpacity}`
+        globeCopyStartRef.current.style.transform = `translateY(${(1 - startCopyOpacity) * 14}px)`
+      }
+      if (globeCopyMiddleRef.current) {
+        const lastCopyOpacity = Math.max(middleCopyOpacity, endCopyOpacity)
+        globeCopyMiddleRef.current.style.opacity = `${lastCopyOpacity}`
+        globeCopyMiddleRef.current.style.transform = `translateY(${(1 - lastCopyOpacity) * 14}px)`
+      }
+
       renderer.render(scene, camera)
       frameId = window.requestAnimationFrame(animate)
     }
@@ -297,6 +471,15 @@ const UsingTypescriptPage = () => {
       atmosphereMaterial.dispose()
       starsGeometry.dispose()
       starsMaterial.dispose()
+      moscowMarkerGeometry.dispose()
+      moscowMarkerMaterial.dispose()
+      routeEntries.forEach(route => {
+        route.glowGeometry.dispose()
+        route.coreGeometry.dispose()
+        route.glowMaterial.dispose()
+        route.coreMaterial.dispose()
+        route.cityMarkerMaterial.dispose()
+      })
       earthTexture.dispose()
       renderer.dispose()
       if (renderer.domElement && renderer.domElement.parentNode) {
@@ -316,6 +499,9 @@ const UsingTypescriptPage = () => {
             </a>
             <a className={styles.navLink} href="#coverage">
               Схема сети
+            </a>
+            <a className={styles.navLink} href="#full-map">
+              Подробная карта
             </a>
             <a className={styles.buyButton} href="#contacts">
               Контакты
@@ -420,8 +606,19 @@ const UsingTypescriptPage = () => {
             Визуализация волоконно-оптической инфраструктуры в 3D.
           </p>
           <div className={styles.globeCanvas} ref={globeCanvasRef}>
+            <div className={styles.globeCopyBlock}>
+              <p className={styles.globeCopyLine} ref={globeCopyStartRef}>
+                Высокое качество интернета для бизнеса и городской инфраструктуры.
+              </p>
+              <p className={styles.globeCopyLine} ref={globeCopyMiddleRef}>
+                Масштабируем сеть, сохраняя скорость, резервирование и контроль качества.
+              </p>
+            </div>
             <div className={styles.globeStage} ref={globeRef} />
           </div>
+          <a className={styles.globeMapButton} id="full-map" href="/map">
+            Посмотреть подробную карту
+          </a>
         </div>
       </section>
 
