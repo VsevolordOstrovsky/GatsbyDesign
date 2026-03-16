@@ -1,4 +1,4 @@
-import * as React from "react"
+﻿import * as React from "react"
 import { Link } from "gatsby"
 
 import Layout from "../components/layout"
@@ -7,15 +7,11 @@ import * as styles from "./index.module.css"
 
 const pages = [
   {
-    text: "Страница 2",
+    text: "Концепт 1",
     url: "/page-2",
   },
   {
-    text: "SSR страница",
-    url: "/using-ssr",
-  },
-  {
-    text: "TypeScript страница",
+    text: "Концепт 2",
     url: "/using-typescript",
   },
 ]
