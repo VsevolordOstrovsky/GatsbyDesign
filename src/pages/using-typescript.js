@@ -59,6 +59,7 @@ const UsingTypescriptPage = () => {
   const globeCanvasRef = React.useRef(null)
   const globeCopyStartRef = React.useRef(null)
   const globeCopyMiddleRef = React.useRef(null)
+  const globeCopyEndRef = React.useRef(null)
 
   const scrollServices = direction => {
     if (!servicesRef.current) return
@@ -189,7 +190,7 @@ const UsingTypescriptPage = () => {
     globeGroup.rotation.y = -1.9
     globeGroup.rotation.x = 0.42
     globeGroup.rotation.z = 0.1
-    globeGroup.position.y = 0.18
+    globeGroup.position.y = 0.16
     scene.add(globeGroup)
 
     const latLonToVector3 = (lat, lon, radius = 1.026) => {
@@ -302,16 +303,8 @@ const UsingTypescriptPage = () => {
     const section = globeSectionRef.current
     const canvasWrap = globeCanvasRef.current
     let scrollProgress = 0
-    let manualProgress = 0
-    let scrollLocked = false
-    let lockedScrollY = 0
-    let lastScrollY = window.scrollY
-    const lockTolerancePx = 6
-    const outsideStateHysteresisPx = 56
-    const unlockNudgePx = 10
     const maxLockedProgress = 2.8
-    let lockCooldownUntil = 0
-    let outsideScrollState = 0
+    const scrollSlowdown = 2.5
     const startCamera = new THREE.Vector3(0, 0, 4.0)
     const endCamera = new THREE.Vector3(1.02, 0.24, 2.08)
     const startLookAt = new THREE.Vector3(0, 0, 0)
@@ -323,88 +316,36 @@ const UsingTypescriptPage = () => {
       const fadeOut = 1 - THREE.MathUtils.smoothstep(value, outStart, outEnd)
       return THREE.MathUtils.clamp(fadeIn * fadeOut, 0, 1)
     }
+    const smoothFade = (value, inStart, inEnd, outStart, outEnd) => {
+      const fadeIn = THREE.MathUtils.smoothstep(value, inStart, inEnd)
+      const fadeOut = 1 - THREE.MathUtils.smoothstep(value, outStart, outEnd)
+      return THREE.MathUtils.clamp(fadeIn * fadeOut, 0, 1)
+    }
+
+    if (section) {
+      section.style.minHeight = `${(maxLockedProgress * scrollSlowdown + 1) * 100}vh`
+    }
 
     const updateScroll = () => {
       if (!section) return
       const viewport = window.innerHeight || 1
-      const currentScrollY = window.scrollY
-      const scrollingDown = currentScrollY >= lastScrollY
-      lastScrollY = currentScrollY
-      const rect = section.getBoundingClientRect()
-      const canvasRect = canvasWrap ? canvasWrap.getBoundingClientRect() : rect
-      const canvasCenter = canvasRect.top + canvasRect.height / 2
-      const centerDelta = canvasCenter - viewport / 2
-      const centerAligned = Math.abs(centerDelta) <= lockTolerancePx
+      const sectionTop = section.offsetTop
+      const sectionHeight = section.offsetHeight
+      const scrollable = Math.max(1, sectionHeight - viewport)
+      const rawProgress = (window.scrollY - sectionTop) / scrollable
+      const normalized = THREE.MathUtils.clamp(rawProgress, 0, 1)
 
-      if (!scrollLocked) {
-        if (centerDelta < -outsideStateHysteresisPx) {
-          outsideScrollState = maxLockedProgress
-        } else if (centerDelta > outsideStateHysteresisPx) {
-          outsideScrollState = 0
-        }
-        scrollProgress = outsideScrollState
+      scrollProgress = normalized * maxLockedProgress
+      const buttonVisible = normalized >= 0.98
+      if (section) {
+        section.classList.toggle(styles.globeButtonVisible, buttonVisible)
       }
 
-      if (centerAligned && !scrollLocked && Date.now() >= lockCooldownUntil) {
-        scrollLocked = true
-        lockedScrollY = window.scrollY
-        manualProgress = scrollingDown ? 0 : maxLockedProgress
-        scrollProgress = manualProgress
-        section.classList.add(styles.globeSectionLocked)
-        document.body.style.position = "fixed"
-        document.body.style.top = `-${lockedScrollY}px`
-        document.body.style.left = "0"
-        document.body.style.right = "0"
-        document.body.style.width = "100%"
-        document.body.style.overflow = "hidden"
-      }
+      // Keep globe text visible during scroll progression
     }
 
     updateScroll()
     window.addEventListener("scroll", updateScroll, { passive: true })
-
-    const unlockScroll = deltaY => {
-      if (!scrollLocked) return
-      scrollLocked = false
-      section.classList.remove(styles.globeSectionLocked)
-      document.body.style.position = ""
-      document.body.style.top = ""
-      document.body.style.left = ""
-      document.body.style.right = ""
-      document.body.style.width = ""
-      document.body.style.overflow = ""
-      const direction = deltaY === 0 ? 0 : deltaY > 0 ? 1 : -1
-      const unlockNudge = direction * unlockNudgePx
-      window.scrollTo(0, lockedScrollY + unlockNudge)
-      lastScrollY = window.scrollY
-      outsideScrollState =
-        direction > 0
-          ? maxLockedProgress
-          : direction < 0
-            ? 0
-            : outsideScrollState
-      lockCooldownUntil = Date.now() + 220
-    }
-
-    const handleWheel = event => {
-      if (!scrollLocked) return
-      event.preventDefault()
-      const delta = event.deltaY / 1700
-      manualProgress = THREE.MathUtils.clamp(
-        manualProgress + delta,
-        0,
-        maxLockedProgress
-      )
-      scrollProgress = manualProgress
-      if (manualProgress <= 0 && event.deltaY < 0) {
-        unlockScroll(event.deltaY)
-      }
-      if (manualProgress >= maxLockedProgress && event.deltaY > 0) {
-        unlockScroll(event.deltaY)
-      }
-    }
-
-    window.addEventListener("wheel", handleWheel, { passive: false })
 
     let frameId = 0
     const animate = () => {
@@ -437,17 +378,20 @@ const UsingTypescriptPage = () => {
         route.cityMarkerMaterial.opacity = localProgress
       })
 
-      const startCopyOpacity = smoothPulse(scrollProgress, 0.03, 0.25, 0.82, 1.02)
-      const middleCopyOpacity = smoothPulse(scrollProgress, 0.95, 1.15, 1.62, 1.9)
-      const endCopyOpacity = THREE.MathUtils.smoothstep(scrollProgress, 1.0, 1.24)
+      const startCopyOpacity = smoothFade(scrollProgress, 0.03, 0.22, 0.85, 1.0)
+      const middleCopyOpacity = smoothFade(scrollProgress, 1.25, 1.45, 1.95, 2.15)
+      const endCopyOpacity = smoothFade(scrollProgress, 2.35, 2.5, 2.75, 2.9)
       if (globeCopyStartRef.current) {
         globeCopyStartRef.current.style.opacity = `${startCopyOpacity}`
         globeCopyStartRef.current.style.transform = `translateY(${(1 - startCopyOpacity) * 14}px)`
       }
       if (globeCopyMiddleRef.current) {
-        const lastCopyOpacity = Math.max(middleCopyOpacity, endCopyOpacity)
-        globeCopyMiddleRef.current.style.opacity = `${lastCopyOpacity}`
-        globeCopyMiddleRef.current.style.transform = `translateY(${(1 - lastCopyOpacity) * 14}px)`
+        globeCopyMiddleRef.current.style.opacity = `${middleCopyOpacity}`
+        globeCopyMiddleRef.current.style.transform = `translateY(${(1 - middleCopyOpacity) * 14}px)`
+      }
+      if (globeCopyEndRef.current) {
+        globeCopyEndRef.current.style.opacity = `${endCopyOpacity}`
+        globeCopyEndRef.current.style.transform = `translateY(${(1 - endCopyOpacity) * 14}px)`
       }
 
       renderer.render(scene, camera)
@@ -459,10 +403,6 @@ const UsingTypescriptPage = () => {
       window.cancelAnimationFrame(frameId)
       window.removeEventListener("resize", resize)
       window.removeEventListener("scroll", updateScroll)
-      window.removeEventListener("wheel", handleWheel)
-      if (scrollLocked) {
-        unlockScroll(0)
-      }
       globeGeometry.dispose()
       glowMaterial.dispose()
       landSphere.geometry.dispose()
@@ -605,6 +545,8 @@ const UsingTypescriptPage = () => {
           <p className={styles.globeSubtitle} data-globe-text>
             Визуализация волоконно-оптической инфраструктуры в 3D.
           </p>
+        </div>
+        <div className={styles.globeSticky}>
           <div className={styles.globeCanvas} ref={globeCanvasRef}>
             <div className={styles.globeCopyBlock}>
               <p className={styles.globeCopyLine} ref={globeCopyStartRef}>
@@ -612,6 +554,9 @@ const UsingTypescriptPage = () => {
               </p>
               <p className={styles.globeCopyLine} ref={globeCopyMiddleRef}>
                 Масштабируем сеть, сохраняя скорость, резервирование и контроль качества.
+              </p>
+              <p className={styles.globeCopyLine} ref={globeCopyEndRef}>
+                Расширяем покрытие, чтобы бизнес оставался устойчивым в любой точке.
               </p>
             </div>
             <div className={styles.globeStage} ref={globeRef} />
