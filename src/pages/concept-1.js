@@ -4,7 +4,7 @@ import { Link } from "gatsby"
 import Seo from "../components/seo"
 import CometBackground from "../components/comet-background"
 import HologramGlobe from "../components/hologram-globe"
-import * as styles from "./page-2.module.css"
+import * as styles from "./concept-1.module.css"
 
 const focusAreas = [
   {

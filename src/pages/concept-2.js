@@ -3,7 +3,7 @@ import { Link } from "gatsby"
 import * as THREE from "three"
 
 import Seo from "../components/seo"
-import * as styles from "./using-typescript.module.css"
+import * as styles from "./concept-2.module.css"
 import OptovoloknoMain from "../images/optovolokno_main.jpg"
 import ArendaImage from "../images/arenda_optovolokna.jpg"
 import ProdazhaImage from "../images/prodazha.jpg"
