@@ -4,7 +4,8 @@ import * as THREE from "three"
 
 import Seo from "../components/seo"
 import * as styles from "./concept-2.module.css"
-import OptovoloknoMain from "../images/optovolokno_main.jpg"
+import OptovoloknoMainDark from "../images/optovolokno_main_dark.jpg"
+import OptovoloknoMainLight from "../images/optovolokno_main_light.jpg"
 import ArendaImage from "../images/arenda_optovolokna.jpg"
 import ProdazhaImage from "../images/prodazha.jpg"
 import ObsluzhivanieImage from "../images/obsluzhivanie.jpg"
@@ -451,11 +452,14 @@ const UsingTypescriptPage = () => {
       </header>
 
       <section className={styles.hero} id="overview">
-        <img
-          className={styles.heroImage}
-          src={OptovoloknoMain}
-          alt="Оптоволоконная магистраль"
-        />
+        <picture>
+          <source media="(prefers-color-scheme: light)" srcSet={OptovoloknoMainLight} />
+          <img
+            className={styles.heroImage}
+            src={OptovoloknoMainDark}
+            alt="Оптоволоконная магистраль"
+          />
+        </picture>
         <div className={styles.heroOverlay}>
           <h1 className={styles.heroBrand}>UL-COM</h1>
           <p className={styles.heroTagline}>Волоконно-оптические линии связи</p>
