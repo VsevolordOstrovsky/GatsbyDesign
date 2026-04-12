@@ -428,7 +428,7 @@
   color: transparent;
   -webkit-text-fill-color: transparent;
   text-shadow: 0 10px 34px rgba(5, 17, 38, 0.46);
-  transition: opacity 220ms linear, transform 220ms linear;
+  transition: opacity 110ms linear, transform 110ms linear;
 }
 
 .globeMapButton {
@@ -452,10 +452,10 @@
   border: 1px solid rgba(140, 195, 255, 0.85);
   box-shadow: 0 10px 30px rgba(24, 90, 200, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   backdrop-filter: blur(4px);
-  transition: background-color 200ms ease, border-color 200ms ease;
+  transition: background-color 100ms ease, border-color 100ms ease;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 240ms ease, transform 240ms ease;
+  transition: opacity 120ms ease, transform 120ms ease;
   transform: translateX(-50%) translateY(8px);
 }
 

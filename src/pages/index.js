@@ -8,11 +8,11 @@ import * as styles from "./index.module.css"
 const pages = [
   {
     text: "Концепт 1",
-    url: "/page-2",
+    url: "/concept-1",
   },
   {
     text: "Концепт 2",
-    url: "/using-typescript",
+    url: "/concept-2",
   },
 ]
 

@@ -304,7 +304,7 @@ const UsingTypescriptPage = () => {
     const canvasWrap = globeCanvasRef.current
     let scrollProgress = 0
     const maxLockedProgress = 2.8
-    const scrollSlowdown = 2.5
+    const scrollSlowdown = 1.25
     const startCamera = new THREE.Vector3(0, 0, 4.0)
     const endCamera = new THREE.Vector3(1.02, 0.24, 2.08)
     const startLookAt = new THREE.Vector3(0, 0, 0)
