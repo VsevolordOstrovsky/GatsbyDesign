@@ -313,20 +313,135 @@
 }
 
 .ctaSection {
-  padding: 72px 16px 88px;
-  text-align: center;
+  padding: 36px 16px 44px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 15% -25%, rgba(59, 130, 246, 0.34), transparent 45%),
+    radial-gradient(circle at 85% 110%, rgba(30, 64, 175, 0.3), transparent 40%),
+    linear-gradient(180deg, #0d1118 0%, #07090e 100%);
 }
 
-.ctaSection h2 {
+.footerCard {
+  width: min(1480px, 100%);
+  margin: 0 auto;
+  border-radius: 38px;
+  padding: clamp(24px, 4vw, 46px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  gap: clamp(18px, 4vw, 60px);
+  background:
+    linear-gradient(140deg, rgba(44, 111, 255, 0.92), rgba(22, 73, 189, 0.96)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+  box-shadow: 0 24px 80px rgba(4, 12, 34, 0.6);
+}
+
+.footerMetric {
+  border-top: 1px solid rgba(216, 236, 255, 0.55);
+  padding-top: 14px;
+}
+
+.footerMetricLabel {
   margin: 0;
-  font-size: clamp(34px, 6.4vw, 66px);
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgba(216, 236, 255, 0.6);
+  color: rgba(230, 243, 255, 0.95);
+  padding: 5px 11px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
 }
 
-.ctaSection p {
-  margin: 16px auto 0;
-  color: #c7c7cc;
-  font-size: 20px;
-  max-width: 860px;
+.footerMetricValue {
+  margin: 12px 0 0;
+  color: #f8fbff;
+  font-size: clamp(38px, 5.5vw, 78px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.footerColumns {
+  width: min(1480px, 100%);
+  margin: 34px auto 0;
+  padding: clamp(22px, 2.6vw, 34px);
+  border-radius: 30px;
+  border: 1px solid rgba(141, 177, 228, 0.22);
+  background: rgba(9, 13, 20, 0.78);
+  backdrop-filter: blur(6px);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(16px, 2vw, 30px);
+}
+
+.footerColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footerColumnTitle {
+  margin: 0;
+  color: #92a4bd;
+  font-size: 16px;
+}
+
+.footerColumn a,
+.footerColumn p {
+  margin: 0;
+  color: #dbe5f6;
+  text-decoration: none;
+  font-size: 28px;
+  line-height: 1.35;
+}
+
+.footerColumn a:hover {
+  color: #fff;
+}
+
+.footerBottom {
+  width: min(1480px, 100%);
+  margin: 24px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.footerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  color: #8fa0b8;
+  font-size: 14px;
+}
+
+.footerMeta p {
+  margin: 0;
+}
+
+.footerPillNav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid rgba(181, 207, 245, 0.5);
+  border-radius: 999px;
+  padding: 5px;
+  background: rgba(229, 239, 255, 0.92);
+}
+
+.footerPillNav a {
+  text-decoration: none;
+  color: #11213b;
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 999px;
+  padding: 10px 16px;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.footerPillNav a:hover {
+  background: #132440;
+  color: #f5f9ff;
 }
 
 .globeSection {
@@ -474,32 +589,6 @@
   text-align: center;
 }
 
-.bottomCtas {
-  margin-top: 28px;
-  display: flex;
-  justify-content: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.buyLarge,
-.learnLarge {
-  border-radius: 999px;
-  padding: 12px 24px;
-  font-size: 17px;
-  text-decoration: none;
-}
-
-.buyLarge {
-  background: #0071e3;
-  color: #fff;
-}
-
-.learnLarge {
-  border: 1px solid rgba(41, 151, 255, 0.55);
-  color: #2997ff;
-}
-
 @media (max-width: 980px) {
   .performance,
   .imageRow {
@@ -508,6 +597,20 @@
 
   .sectionLead {
     font-size: 21px;
+  }
+
+  .footerCard {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .footerColumns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .footerBottom {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
@@ -585,6 +688,47 @@
 
   .globeCopyLineRight {
     text-align: center;
+  }
+
+  .footerCard {
+    border-radius: 26px;
+    padding: 20px 18px;
+  }
+
+  .footerMetricValue {
+    font-size: clamp(30px, 9vw, 48px);
+  }
+
+  .footerColumns {
+    margin-top: 16px;
+    padding: 18px;
+    border-radius: 22px;
+    grid-template-columns: 1fr;
+  }
+
+  .footerColumn a,
+  .footerColumn p {
+    font-size: 22px;
+  }
+
+  .footerBottom {
+    margin-top: 16px;
+    gap: 14px;
+  }
+
+  .footerMeta {
+    font-size: 13px;
+    gap: 6px 12px;
+  }
+
+  .footerPillNav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .footerPillNav a {
+    font-size: 13px;
+    padding: 9px 10px;
   }
 }
 
