@@ -4,7 +4,8 @@ import * as THREE from "three"
 
 import Seo from "../components/seo"
 import * as styles from "./concept-2.module.css"
-import OptovoloknoMain from "../images/optovolokno_main.jpg"
+import OptovoloknoMainDark from "../images/optovolokno_main_dark.jpg"
+import OptovoloknoMainLight from "../images/optovolokno_main_light.jpg"
 import ArendaImage from "../images/arenda_optovolokna.jpg"
 import ProdazhaImage from "../images/prodazha.jpg"
 import ObsluzhivanieImage from "../images/obsluzhivanie.jpg"
@@ -451,11 +452,14 @@ const UsingTypescriptPage = () => {
       </header>
 
       <section className={styles.hero} id="overview">
-        <img
-          className={styles.heroImage}
-          src={OptovoloknoMain}
-          alt="Оптоволоконная магистраль"
-        />
+        <picture>
+          <source media="(prefers-color-scheme: light)" srcSet={OptovoloknoMainLight} />
+          <img
+            className={styles.heroImage}
+            src={OptovoloknoMainDark}
+            alt="Оптоволоконная магистраль"
+          />
+        </picture>
         <div className={styles.heroOverlay}>
           <h1 className={styles.heroBrand}>UL-COM</h1>
           <p className={styles.heroTagline}>Волоконно-оптические линии связи</p>
@@ -568,19 +572,55 @@ const UsingTypescriptPage = () => {
       </section>
 
       <section className={styles.ctaSection} id="contacts">
-        <h2>Контакты</h2>
-        <p>
-          Контактный телефон: +7 (495) 748-13-49; 8 (800) 222-35-49
-          (многоканальный). E-mail: info@ul-com.ru
-        </p>
-        <p>Адрес: Москва, 2-ой Кабельный проезд, д. 1, офис 210.3.</p>
-        <div className={styles.bottomCtas}>
-          <a className={styles.buyLarge} href="mailto:info@ul-com.ru">
-            Написать
-          </a>
-          <Link className={styles.learnLarge} to="/">
-            На главную
-          </Link>
+        <div className={styles.footerCard}>
+          <div className={styles.footerMetric}>
+            <p className={styles.footerMetricLabel}>ГОД ОСНОВАНИЯ</p>
+            <p className={styles.footerMetricValue}>2007</p>
+          </div>
+          <div className={styles.footerMetric}>
+            <p className={styles.footerMetricLabel}>РАБОТАЕМ В РЕГИОНАХ</p>
+            <p className={styles.footerMetricValue}>Москва и МО</p>
+          </div>
+        </div>
+
+        <div className={styles.footerColumns}>
+          <div className={styles.footerColumn}>
+            <p className={styles.footerColumnTitle}>Связаться</p>
+            <a href="mailto:info@ul-com.ru">info@ul-com.ru</a>
+            <a href="tel:+74957481349">+7 (495) 748-13-49</a>
+            <a href="tel:+78002223549">8 (800) 222-35-49</a>
+          </div>
+
+          <div className={styles.footerColumn}>
+            <p className={styles.footerColumnTitle}>Навигация</p>
+            <a href="#services">Услуги</a>
+            <a href="#coverage">Схема сети</a>
+            <a href="/map">Карта сети</a>
+          </div>
+
+          <div className={styles.footerColumn}>
+            <p className={styles.footerColumnTitle}>Юридический адрес</p>
+            <p>Москва, 2-ой Кабельный проезд, д. 1, офис 210.3</p>
+          </div>
+
+          <div className={styles.footerColumn}>
+            <p className={styles.footerColumnTitle}>Режим работы</p>
+            <p>Пн-Пт: 09:00-18:00</p>
+            <p>Техподдержка: 24/7</p>
+          </div>
+        </div>
+
+        <div className={styles.footerBottom}>
+          <div className={styles.footerMeta}>
+            <p>ЗАО "ЮЛ-ком"</p>
+            <p>Политика обработки данных</p>
+          </div>
+          <div className={styles.footerPillNav}>
+            <a href="#services">Услуги</a>
+            <a href="#coverage">Покрытие</a>
+            <a href="#full-map">Карта</a>
+            <Link to="/">Главная</Link>
+          </div>
         </div>
       </section>
     </div>
