@@ -1,5 +1,10 @@
 import React from "react"
-import SimpleMap from "../components/SimpleMap"
+import loadable from "@loadable/component"
+
+const SimpleMap = loadable(() => import("../components/SimpleMap"), {
+  ssr: false,
+  fallback: <div style={{ padding: "2rem" }}>Загрузка карты...</div>,
+})
 
 const MapPage = () => {
   return (

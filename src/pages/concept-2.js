@@ -1,6 +1,5 @@
 ﻿import * as React from "react"
 import { Link } from "gatsby"
-import * as THREE from "three"
 
 import Seo from "../components/seo"
 import * as styles from "./concept-2.module.css"
@@ -61,6 +60,21 @@ const UsingTypescriptPage = () => {
   const globeCopyStartRef = React.useRef(null)
   const globeCopyMiddleRef = React.useRef(null)
   const globeCopyEndRef = React.useRef(null)
+  const [threeModule, setThreeModule] = React.useState(null)
+
+  React.useEffect(() => {
+    let isMounted = true
+
+    import("three").then(module => {
+      if (isMounted) {
+        setThreeModule(module)
+      }
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const scrollServices = direction => {
     if (!servicesRef.current) return
@@ -73,6 +87,8 @@ const UsingTypescriptPage = () => {
   }
 
   React.useEffect(() => {
+    const THREE = threeModule
+    if (!THREE) return
     if (typeof window === "undefined") return
     if (!globeRef.current) return
 
@@ -427,7 +443,7 @@ const UsingTypescriptPage = () => {
         renderer.domElement.parentNode.removeChild(renderer.domElement)
       }
     }
-  }, [])
+  }, [threeModule])
 
   return (
     <div className={styles.page}>
