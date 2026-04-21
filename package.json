@@ -11,6 +11,7 @@
     "gatsby-plugin-manifest": "^5.14.0",
     "gatsby-plugin-sharp": "^5.14.0",
     "gatsby-source-filesystem": "^5.16.0",
+    "gatsby-transformer-json": "^5.16.0",
     "gatsby-transformer-sharp": "^5.14.0",
     "leaflet": "^1.9.4",
     "leaflet-kml": "^1.0.1",
