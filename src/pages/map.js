@@ -1,12 +1,10 @@
-import React from "react"
-import SimpleMap from "../components/SimpleMap"
+import React from 'react';
+import { SimpleMap } from '../components/SimpleMap'; // named import с фигурными скобками
 
-const MapPage = () => {
+export default function MapPage() {
   return (
-    <div style={{ margin: 0, padding: 0 }}>
+    <div>
       <SimpleMap />
     </div>
-  )
+  );
 }
-
-export default MapPage
