@@ -8,6 +8,7 @@ class DistanceControl {
     this.tempMarker = null
     this.lineLayer = null
     this.markers = []
+    this.currentLabel = null // Только одна метка для последней точки
     this.distanceDisplay = null
 
     this.init()
@@ -27,6 +28,87 @@ class DistanceControl {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
     const distance = R * c
     return distance
+  }
+
+  // Получение общего расстояния
+  getTotalDistance() {
+    if (this.points.length < 2) return 0
+
+    let totalDistance = 0
+    for (let i = 1; i < this.points.length; i++) {
+      totalDistance += this.calculateDistance(
+        this.points[i - 1].lat,
+        this.points[i - 1].lng,
+        this.points[i].lat,
+        this.points[i].lng
+      )
+    }
+    return totalDistance
+  }
+
+  // Создание обычного маркера (красная точка)
+  createMarker(lng, lat) {
+    const el = document.createElement("div")
+    el.style.cssText = `
+      width: 12px;
+      height: 12px;
+      background-color: #FF4444;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      cursor: pointer;
+    `
+
+    const marker = new mmrgl.Marker({ element: el })
+      .setLngLat([lng, lat])
+      .addTo(this.map)
+
+    return marker
+  }
+
+  // Создание метки с общим расстоянием (рядом с последней точкой)
+  createDistanceLabel(lng, lat, totalDistance) {
+    // Удаляем старую метку, если есть
+    if (this.currentLabel) {
+      this.currentLabel.remove()
+    }
+
+    // Форматируем расстояние
+    let formattedDistance
+    if (totalDistance < 1) {
+      // Меньше 1 км - показываем в метрах
+      const meters = Math.round(totalDistance * 1000)
+      formattedDistance = `${meters} м`
+    } else {
+      // Больше или равно 1 км - показываем в км с 1 знаком после запятой
+      formattedDistance = `${totalDistance.toFixed(1)} км`
+    }
+
+    const el = document.createElement("div")
+    el.innerHTML = `
+    <div style="
+      background: rgba(0,0,0,0.75);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      font-family: Arial, sans-serif;
+      white-space: nowrap;
+      border: 1px solid rgba(255,255,255,0.3);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    ">
+      📏 ${formattedDistance}
+    </div>
+  `
+
+    // Смещаем метку вправо от точки
+    const labelMarker = new mmrgl.Marker({ element: el, offset: [15, -10] })
+      .setLngLat([lng, lat])
+      .addTo(this.map)
+
+    this.currentLabel = labelMarker
+    return labelMarker
   }
 
   // Создание кнопки управления
@@ -63,7 +145,7 @@ class DistanceControl {
     return button
   }
 
-  // Создание дисплея для отображения расстояния
+  // Создание дисплея для отображения общего расстояния
   createDistanceDisplay() {
     const display = document.createElement("div")
     display.id = "distance-display"
@@ -71,7 +153,7 @@ class DistanceControl {
       position: absolute;
       bottom: 20px;
       left: 20px;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.7);
       color: white;
       padding: 12px 20px;
       border-radius: 8px;
@@ -86,7 +168,7 @@ class DistanceControl {
     return display
   }
 
-  // Обновление отображения расстояния
+  // Обновление отображения общего расстояния внизу
   updateDistanceDisplay() {
     if (this.points.length < 2) {
       if (this.distanceDisplay) {
@@ -95,20 +177,18 @@ class DistanceControl {
       return
     }
 
-    let totalDistance = 0
-    for (let i = 1; i < this.points.length; i++) {
-      totalDistance += this.calculateDistance(
-        this.points[i - 1].lat,
-        this.points[i - 1].lng,
-        this.points[i].lat,
-        this.points[i].lng
-      )
+    const totalDistance = this.getTotalDistance()
+
+    // Форматируем расстояние для отображения внизу
+    let formattedDistance
+    if (totalDistance < 1) {
+      const meters = Math.round(totalDistance * 1000)
+      formattedDistance = `${meters} м`
+    } else {
+      formattedDistance = `${totalDistance.toFixed(2)} км`
     }
 
-    const km = totalDistance.toFixed(2)
-    const meters = (totalDistance * 1000).toFixed(0)
-
-    this.distanceDisplay.innerHTML = `📏 Расстояние: ${km} км (${meters} м)`
+    this.distanceDisplay.innerHTML = `📏 Общее расстояние: ${formattedDistance}`
     this.distanceDisplay.style.display = "block"
   }
 
@@ -156,32 +236,54 @@ class DistanceControl {
     this.lineLayer = "measure-line"
   }
 
+  // Обновление метки у последней точки
+  updateLastPointLabel() {
+    if (this.points.length < 2) {
+      // Если меньше 2 точек, удаляем метку
+      if (this.currentLabel) {
+        this.currentLabel.remove()
+        this.currentLabel = null
+      }
+      return
+    }
+
+    const lastPoint = this.points[this.points.length - 1]
+    const totalDistance = this.getTotalDistance()
+
+    // Создаем или обновляем метку у последней точки
+    this.createDistanceLabel(lastPoint.lng, lastPoint.lat, totalDistance)
+  }
+
   // Добавление точки на карту
   addPoint(lng, lat) {
-    // Создаем маркер
-    const marker = new mmrgl.Marker({
-      color: "#FF4444",
-      draggable: false,
-    })
-      .setLngLat([lng, lat])
-      .addTo(this.map)
-
-    // Добавляем всплывающую подсказку с номером точки
     const pointNumber = this.points.length + 1
-    const popup = new mmrgl.Popup({ offset: 25 }).setHTML(
-      `<strong>Точка ${pointNumber}</strong><br/>${lng.toFixed(
-        4
-      )}, ${lat.toFixed(4)}`
-    )
 
-    marker.setPopup(popup)
+    // Создаем обычную точку
+    const marker = this.createMarker(lng, lat)
 
-    this.points.push({ lng, lat, marker })
+    // Сохраняем точку
+    this.points.push({
+      lng,
+      lat,
+      marker,
+      pointNumber,
+    })
     this.markers.push(marker)
 
-    // Обновляем линию и расстояние
+    // Обновляем линию
     this.updateLine()
+
+    // Обновляем общее расстояние внизу
     this.updateDistanceDisplay()
+
+    // Обновляем метку у последней точки (показываем общее расстояние)
+    this.updateLastPointLabel()
+
+    console.log(
+      `Точка ${pointNumber}: ${lng}, ${lat}, общее расстояние: ${this.getTotalDistance().toFixed(
+        2
+      )} км`
+    )
   }
 
   // Очистка всех измерений
@@ -190,6 +292,12 @@ class DistanceControl {
     this.markers.forEach(marker => marker.remove())
     this.markers = []
     this.points = []
+
+    // Удаляем метку
+    if (this.currentLabel) {
+      this.currentLabel.remove()
+      this.currentLabel = null
+    }
 
     // Удаляем линию
     if (this.lineLayer) {

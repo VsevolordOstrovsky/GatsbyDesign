@@ -39,12 +39,28 @@ export function SimpleMap() {
           },
           paint: {
             "line-color": "#AE3478",
-            "line-width": 5,
+            "line-width": 4,
           },
         })
       })
 
-      const text = "asdasdasdad"
+      var markerHeight = 50, markerRadius = 10, linearOffset = 25
+      var popupOffsets = {
+        top: [0, 0],
+        "top-left": [0, 0],
+        "top-right": [0, 0],
+        bottom: [0, -markerHeight],
+        "bottom-left": [
+          linearOffset,
+          (markerHeight - markerRadius + linearOffset) * -1,
+        ],
+        "bottom-right": [
+          -linearOffset,
+          (markerHeight - markerRadius + linearOffset) * -1,
+        ],
+        left: [markerRadius, (markerHeight - markerRadius) * -1],
+        right: [-markerRadius, (markerHeight - markerRadius) * -1],
+      }
 
       // Отображаем точки на карте БЕЗ КЛАСТЕРИЗАЦИИ
       map.on("load", () =>  {
@@ -54,7 +70,7 @@ export function SimpleMap() {
             // Просто добавляем маркеры, без кластеризации
             data.features.filter(object => object.geometry?.type === "Point").forEach(feature => {
               const [lng, lat] = feature.geometry.coordinates
-              new mmrgl.Marker()
+              new mmrgl.Marker({scale: 0.75})
                 .setLngLat([lng, lat])
                 .setPopup(
                   new mmrgl.Popup().setHTML(`
