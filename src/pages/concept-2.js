@@ -1,10 +1,10 @@
 ﻿import * as React from "react"
 import { Link } from "gatsby"
-import * as THREE from "three"
 
 import Seo from "../components/seo"
 import * as styles from "./concept-2.module.css"
-import OptovoloknoMain from "../images/optovolokno_main.jpg"
+import OptovoloknoMainDark from "../images/optovolokno_main_dark.jpg"
+import OptovoloknoMainLight from "../images/optovolokno_main_light.jpg"
 import ArendaImage from "../images/arenda_optovolokna.jpg"
 import ProdazhaImage from "../images/prodazha.jpg"
 import ObsluzhivanieImage from "../images/obsluzhivanie.jpg"
@@ -60,6 +60,41 @@ const UsingTypescriptPage = () => {
   const globeCopyStartRef = React.useRef(null)
   const globeCopyMiddleRef = React.useRef(null)
   const globeCopyEndRef = React.useRef(null)
+  const [theme, setTheme] = React.useState("dark")
+  const [threeModule, setThreeModule] = React.useState(null)
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const storedTheme = window.localStorage.getItem("concept-2-theme")
+    if (storedTheme === "light" || storedTheme === "dark") {
+      setTheme(storedTheme)
+      return
+    }
+
+    if (window.matchMedia("(prefers-color-scheme: light)").matches) {
+      setTheme("light")
+    }
+  }, [])
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    window.localStorage.setItem("concept-2-theme", theme)
+  }, [theme])
+
+  React.useEffect(() => {
+    let isMounted = true
+
+    import("three").then(module => {
+      if (isMounted) {
+        setThreeModule(module)
+      }
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const scrollServices = direction => {
     if (!servicesRef.current) return
@@ -72,6 +107,8 @@ const UsingTypescriptPage = () => {
   }
 
   React.useEffect(() => {
+    const THREE = threeModule
+    if (!THREE) return
     if (typeof window === "undefined") return
     if (!globeRef.current) return
 
@@ -205,6 +242,8 @@ const UsingTypescriptPage = () => {
 
     const routesGroup = new THREE.Group()
     globeGroup.add(routesGroup)
+
+    // === ХАРДКОДНЫЕ ТОЧКИ (пиксельные координаты) ===
     const textureWidthPx = 1920
     const textureHeightPx = 1152
     const pixelToVector3 = (x, y, radius = 1.03) => {
@@ -222,6 +261,8 @@ const UsingTypescriptPage = () => {
       { x: 1124, y: 445 },
       { x: 1096, y: 476 },
     ]
+    // =============================================
+
     const moscowMarkerGeometry = new THREE.SphereGeometry(0.012, 16, 16)
     const moscowMarkerMaterial = new THREE.MeshBasicMaterial({
       color: 0xff5866,
@@ -301,21 +342,15 @@ const UsingTypescriptPage = () => {
     window.addEventListener("resize", resize)
 
     const section = globeSectionRef.current
-    const canvasWrap = globeCanvasRef.current
     let scrollProgress = 0
-    const maxLockedProgress = 2.8
-    const scrollSlowdown = 1.25
-    const startCamera = new THREE.Vector3(0, 0, 4.0)
-    const endCamera = new THREE.Vector3(1.02, 0.24, 2.08)
-    const startLookAt = new THREE.Vector3(0, 0, 0)
-    const endLookAt = new THREE.Vector3(0.34, 1.05, 0.43)
-    const targetCamera = new THREE.Vector3()
-    const lookAtTarget = new THREE.Vector3()
-    const smoothPulse = (value, inStart, inEnd, outStart, outEnd) => {
-      const fadeIn = THREE.MathUtils.smoothstep(value, inStart, inEnd)
-      const fadeOut = 1 - THREE.MathUtils.smoothstep(value, outStart, outEnd)
-      return THREE.MathUtils.clamp(fadeIn * fadeOut, 0, 1)
-    }
+    const rotationStageLength = 0.45
+    const routesStageLength = 2.55
+    const maxLockedProgress = rotationStageLength + routesStageLength
+    const scrollSlowdown = 0.8
+    const lockedCamera = new THREE.Vector3(1.02, 0.24, 2.08)
+    const lockedLookAt = new THREE.Vector3(0.34, 1.05, 0.43)
+    const baseGlobeRotationX = 0.02
+    const baseGlobeRotationY = -1.56
     const smoothFade = (value, inStart, inEnd, outStart, outEnd) => {
       const fadeIn = THREE.MathUtils.smoothstep(value, inStart, inEnd)
       const fadeOut = 1 - THREE.MathUtils.smoothstep(value, outStart, outEnd)
@@ -340,8 +375,6 @@ const UsingTypescriptPage = () => {
       if (section) {
         section.classList.toggle(styles.globeButtonVisible, buttonVisible)
       }
-
-      // Keep globe text visible during scroll progression
     }
 
     updateScroll()
@@ -349,22 +382,30 @@ const UsingTypescriptPage = () => {
 
     let frameId = 0
     const animate = () => {
-      const cameraProgress = THREE.MathUtils.clamp(scrollProgress, 0, 1)
-      const routesProgress = THREE.MathUtils.clamp(
-        (scrollProgress - 1) / (maxLockedProgress - 1),
+      const totalRotationProgress = THREE.MathUtils.clamp(
+        scrollProgress / maxLockedProgress,
         0,
         1
       )
-      targetCamera.lerpVectors(startCamera, endCamera, cameraProgress)
-      lookAtTarget.lerpVectors(startLookAt, endLookAt, cameraProgress)
-      camera.position.lerp(targetCamera, 0.08)
-      camera.lookAt(lookAtTarget)
-      globeGroup.rotation.x = THREE.MathUtils.lerp(0.42, 0.02, cameraProgress)
-      globeGroup.rotation.y = THREE.MathUtils.lerp(-1.9, -1.56, cameraProgress)
+      const rotationProgress = THREE.MathUtils.clamp(
+        scrollProgress / rotationStageLength,
+        0,
+        1
+      )
+      const routesProgress = THREE.MathUtils.clamp(
+        (scrollProgress - rotationStageLength) / routesStageLength,
+        0,
+        1
+      )
+      const rotationOffset = totalRotationProgress * 0.72
+      camera.position.lerp(lockedCamera, 0.08)
+      camera.lookAt(lockedLookAt)
+      globeGroup.rotation.x = baseGlobeRotationX
+      globeGroup.rotation.y = baseGlobeRotationY - rotationOffset
 
       moscowMarkerMaterial.opacity = routesProgress
       routeEntries.forEach(route => {
-        const startAt = route.index * 0.1
+        const startAt = Math.min(route.index * 0.025, 0.85)
         const localProgress = THREE.MathUtils.clamp(
           (routesProgress - startAt) / (1 - startAt),
           0,
@@ -378,8 +419,8 @@ const UsingTypescriptPage = () => {
         route.cityMarkerMaterial.opacity = localProgress
       })
 
-      const startCopyOpacity = smoothFade(scrollProgress, 0.03, 0.22, 0.85, 1.0)
-      const middleCopyOpacity = smoothFade(scrollProgress, 1.25, 1.45, 1.95, 2.15)
+      const startCopyOpacity = smoothFade(scrollProgress, 0.03, 0.22, 0.84, 1.0)
+      const middleCopyOpacity = smoothFade(scrollProgress, 1.08, 1.28, 1.82, 1.98)
       const endCopyOpacity = smoothFade(scrollProgress, 2.35, 2.5, 2.75, 2.9)
       if (globeCopyStartRef.current) {
         globeCopyStartRef.current.style.opacity = `${startCopyOpacity}`
@@ -426,10 +467,12 @@ const UsingTypescriptPage = () => {
         renderer.domElement.parentNode.removeChild(renderer.domElement)
       }
     }
-  }, [])
+  }, [threeModule])
 
   return (
-    <div className={styles.page}>
+    <div
+      className={`${styles.page} ${theme === "light" ? styles.pageLight : styles.pageDark}`}
+    >
       <header className={styles.topBar}>
         <div className={styles.topBarInner}>
           <p className={styles.productName}>ЗАО "ЮЛ-ком"</p>
@@ -446,6 +489,25 @@ const UsingTypescriptPage = () => {
             <a className={styles.buyButton} href="#contacts">
               Контакты
             </a>
+            <button
+              type="button"
+              className={styles.themeToggle}
+              onClick={() =>
+                setTheme(currentTheme => (currentTheme === "dark" ? "light" : "dark"))
+              }
+              aria-label={
+                theme === "dark"
+                  ? "Переключить на светлую тему"
+                  : "Переключить на темную тему"
+              }
+              aria-pressed={theme === "light"}
+            >
+              <span className={styles.themeToggleTrack}>
+                <span className={styles.themeToggleOption}>Темная</span>
+                <span className={styles.themeToggleOption}>Светлая</span>
+                <span className={styles.themeToggleThumb} />
+              </span>
+            </button>
           </div>
         </div>
       </header>
@@ -453,7 +515,7 @@ const UsingTypescriptPage = () => {
       <section className={styles.hero} id="overview">
         <img
           className={styles.heroImage}
-          src={OptovoloknoMain}
+          src={theme === "light" ? OptovoloknoMainLight : OptovoloknoMainDark}
           alt="Оптоволоконная магистраль"
         />
         <div className={styles.heroOverlay}>
@@ -568,19 +630,55 @@ const UsingTypescriptPage = () => {
       </section>
 
       <section className={styles.ctaSection} id="contacts">
-        <h2>Контакты</h2>
-        <p>
-          Контактный телефон: +7 (495) 748-13-49; 8 (800) 222-35-49
-          (многоканальный). E-mail: info@ul-com.ru
-        </p>
-        <p>Адрес: Москва, 2-ой Кабельный проезд, д. 1, офис 210.3.</p>
-        <div className={styles.bottomCtas}>
-          <a className={styles.buyLarge} href="mailto:info@ul-com.ru">
-            Написать
-          </a>
-          <Link className={styles.learnLarge} to="/">
-            На главную
-          </Link>
+        <div className={styles.footerCard}>
+          <div className={styles.footerMetric}>
+            <p className={styles.footerMetricLabel}>ГОД ОСНОВАНИЯ</p>
+            <p className={styles.footerMetricValue}>2007</p>
+          </div>
+          <div className={styles.footerMetric}>
+            <p className={styles.footerMetricLabel}>РАБОТАЕМ В РЕГИОНАХ</p>
+            <p className={styles.footerMetricValue}>Москва и МО</p>
+          </div>
+        </div>
+
+        <div className={styles.footerColumns}>
+          <div className={styles.footerColumn}>
+            <p className={styles.footerColumnTitle}>Связаться</p>
+            <a href="mailto:info@ul-com.ru">info@ul-com.ru</a>
+            <a href="tel:+74957481349">+7 (495) 748-13-49</a>
+            <a href="tel:+78002223549">8 (800) 222-35-49</a>
+          </div>
+
+          <div className={styles.footerColumn}>
+            <p className={styles.footerColumnTitle}>Навигация</p>
+            <a href="#services">Услуги</a>
+            <a href="#coverage">Схема сети</a>
+            <a href="/map">Карта сети</a>
+          </div>
+
+          <div className={styles.footerColumn}>
+            <p className={styles.footerColumnTitle}>Юридический адрес</p>
+            <p>Москва, 2-ой Кабельный проезд, д. 1, офис 210.3</p>
+          </div>
+
+          <div className={styles.footerColumn}>
+            <p className={styles.footerColumnTitle}>Режим работы</p>
+            <p>Пн-Пт: 09:00-18:00</p>
+            <p>Техподдержка: 24/7</p>
+          </div>
+        </div>
+
+        <div className={styles.footerBottom}>
+          <div className={styles.footerMeta}>
+            <p>ЗАО "ЮЛ-ком"</p>
+            <p>Политика обработки данных</p>
+          </div>
+          <div className={styles.footerPillNav}>
+            <a href="#services">Услуги</a>
+            <a href="#coverage">Покрытие</a>
+            <a href="#full-map">Карта</a>
+            <Link to="/">Главная</Link>
+          </div>
         </div>
       </section>
     </div>

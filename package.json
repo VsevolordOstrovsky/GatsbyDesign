@@ -26,6 +26,9 @@
     "@types/three": "^0.183.1",
     "prettier": "^2.8.8"
   },
+  "engines": {
+    "node": "24"
+  },
   "keywords": [
     "gatsby"
   ],

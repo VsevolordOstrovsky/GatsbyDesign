@@ -1,10 +1,15 @@
 ﻿import * as React from "react"
 import { Link } from "gatsby"
+import loadable from "@loadable/component"
 
 import Seo from "../components/seo"
 import CometBackground from "../components/comet-background"
-import HologramGlobe from "../components/hologram-globe"
 import * as styles from "./concept-1.module.css"
+
+const HologramGlobe = loadable(() => import("../components/hologram-globe"), {
+  ssr: false,
+  fallback: <div />,
+})
 
 const focusAreas = [
   {
