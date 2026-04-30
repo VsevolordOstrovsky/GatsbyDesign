@@ -4,6 +4,7 @@ import 'mmr-gl/dist/mmr-gl.css';
 import { userLineData } from './lines/lines'
 import { userPointData } from "./points/points"
 import DistanceControl from "./DistanceControl"
+import map_style from "../styles/map_style.json"
 
 export function SimpleMap() {
   const mapRef = useRef(null)
@@ -17,7 +18,7 @@ export function SimpleMap() {
         container: "map",
         zoom: 8,
         center: [37.6165, 55.7505],
-        style: "mmr://api/styles/main_style.json",
+        style: map_style,
         hash: true,
       })
 
@@ -38,29 +39,11 @@ export function SimpleMap() {
             "line-cap": "round",
           },
           paint: {
-            "line-color": "#AE3478",
-            "line-width": 4,
+            "line-color": "#dc2d9c",
+            "line-width": 2,
           },
         })
       })
-
-      var markerHeight = 50, markerRadius = 10, linearOffset = 25
-      var popupOffsets = {
-        top: [0, 0],
-        "top-left": [0, 0],
-        "top-right": [0, 0],
-        bottom: [0, -markerHeight],
-        "bottom-left": [
-          linearOffset,
-          (markerHeight - markerRadius + linearOffset) * -1,
-        ],
-        "bottom-right": [
-          -linearOffset,
-          (markerHeight - markerRadius + linearOffset) * -1,
-        ],
-        left: [markerRadius, (markerHeight - markerRadius) * -1],
-        right: [-markerRadius, (markerHeight - markerRadius) * -1],
-      }
 
       // Отображаем точки на карте БЕЗ КЛАСТЕРИЗАЦИИ
       map.on("load", () =>  {
