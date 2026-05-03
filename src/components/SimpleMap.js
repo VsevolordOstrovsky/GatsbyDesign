@@ -39,7 +39,7 @@ export function SimpleMap() {
             "line-cap": "round",
           },
           paint: {
-            "line-color": "#dc2d9c",
+            "line-color": "#b6107b",
             "line-width": 2,
           },
         })
